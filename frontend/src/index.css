@@ -33,10 +33,22 @@ code {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.header h1 {
-  margin: 0;
-  font-size: 2.5rem;
-  font-weight: 300;
+.header p {
+  margin: 0.5rem 0;
+}
+
+.connection-status {
+  margin-top: 1rem;
+}
+
+.status-connected {
+  color: #28a745;
+  font-weight: 500;
+}
+
+.status-disconnected {
+  color: #dc3545;
+  font-weight: 500;
 }
 
 .controls {

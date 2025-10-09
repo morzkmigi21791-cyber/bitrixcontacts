@@ -65,34 +65,33 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-cd ..
 echo [SUCCESS] Node.js dependencies installed
 echo.
 
-REM Start backend in new window
-echo [INFO] Starting FastAPI backend on port 8000...
-start "Bitrix24 Backend" cmd /k "cd /d %~dp0backend && python backend.py"
+REM Build frontend for production
+echo [INFO] Building frontend for production...
+call npm run build
+if errorlevel 1 (
+    echo [ERROR] Failed to build frontend
+    pause
+    exit /b 1
+)
+echo [SUCCESS] Frontend built successfully
+echo.
 
-REM Wait a moment for backend to start
-timeout /t 3 /nobreak >nul
+cd ..
 
-REM Start frontend in new window
-echo [INFO] Starting React frontend on port 3000...
-start "Bitrix24 Frontend" cmd /k "cd /d %~dp0frontend && npm start"
+REM Start unified server
+echo [INFO] Starting unified server on port 8000...
+echo [INFO] Frontend and backend will be served from the same port
+echo [INFO] Open your browser and go to: http://localhost:8000
+echo.
 
-REM Wait a moment for frontend to start
-timeout /t 5 /nobreak >nul
-
-REM Browser will open automatically by React
+python backend\backend.py
 
 echo.
 echo ============================================================
-echo                    Project Started Successfully!
+echo                    Server Stopped
 echo ============================================================
 echo.
-echo Backend API:    http://localhost:8000
-echo Frontend:       http://localhost:3000
-echo API Docs:       http://localhost:8000/docs
-echo.
-echo Press any key to close this launcher...
-pause >nul
+pause
