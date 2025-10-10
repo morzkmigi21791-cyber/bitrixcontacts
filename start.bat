@@ -30,8 +30,8 @@ echo [INFO] Python and Node.js are installed
 echo.
 
 REM Check if required files exist
-if not exist "backend\backend.py" (
-    echo [ERROR] Backend file not found: backend\backend.py
+if not exist "backend\main.py" (
+    echo [ERROR] Backend file not found: backend\main.py
     pause
     exit /b 1
 )
@@ -87,7 +87,7 @@ echo [INFO] Frontend and backend will be served from the same port
 echo [INFO] Open your browser and go to: http://localhost:8000
 echo.
 
-python backend\backend.py
+python backend\main.py
 
 echo.
 echo ============================================================

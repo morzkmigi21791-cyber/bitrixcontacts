@@ -1,29 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
+import stateManager from './stateManager';
 
 function App() {
-  const [companies, setCompanies] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState('');
-  const [statusType, setStatusType] = useState('');
-  const [wsConnected, setWsConnected] = useState(false);
-  const [reconnectAttempts, setReconnectAttempts] = useState(0);
-  const [progress, setProgress] = useState({ current: 0, total: 0, type: '' });
-  const [connectionNotification, setConnectionNotification] = useState('');
-  const [isInitialConnection, setIsInitialConnection] = useState(true);
+  // Используем централизованное состояние
+  const [companies, setCompanies] = useState(stateManager.getValue('companies') || []);
+  const [loading, setLoading] = useState(stateManager.getValue('loading') || false);
+  const [status, setStatus] = useState(stateManager.getValue('status') || '');
+  const [statusType, setStatusType] = useState(stateManager.getValue('statusType') || '');
+  const [wsConnected, setWsConnected] = useState(stateManager.getValue('wsConnected') || false);
+  const [reconnectAttempts, setReconnectAttempts] = useState(stateManager.getValue('reconnectAttempts') || 0);
+  const [sessionId, setSessionId] = useState(stateManager.getValue('sessionId') || null);
+  
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const pingIntervalRef = useRef(null);
   const maxReconnectAttempts = 3;
   const reconnectDelay = 5000; // 5 секунд между попытками
-
-  // Функция для показа временного уведомления
-  const showConnectionNotification = (message, type = 'info') => {
-    setConnectionNotification({ message, type });
-    setTimeout(() => {
-      setConnectionNotification('');
-    }, 3000); // Показываем 3 секунды
-  };
 
   // WebSocket connection functions
   const connectWebSocket = () => {
@@ -39,22 +32,44 @@ function App() {
     }
     
     try {
-      // Определяем WebSocket URL в зависимости от окружения
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsHost = window.location.host;
-      const ws = new WebSocket(`${wsProtocol}//${wsHost}/ws`);
+      // Определяем WebSocket URL динамически
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.hostname;
+      const port = window.location.port || (window.location.protocol === 'https:' ? '443' : '8000');
+      const wsUrl = `${protocol}//${host}:${port}/ws`;
+      
+      const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
         console.log('WebSocket connected');
-        setWsConnected(true);
-        setReconnectAttempts(0);
+        stateManager.setWsConnected(true);
+        stateManager.setReconnectAttempts(0);
         
-        // Показываем уведомление только если это не первоначальное подключение
-        if (!isInitialConnection) {
-          showConnectionNotification('✅ Подключено к серверу', 'success');
+        // Получаем session_id из URL или создаем новый
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentSessionId = urlParams.get('session_id');
+        
+        if (!currentSessionId) {
+          // Если нет session_id в URL, генерируем новый UUID и обновляем URL
+          currentSessionId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = Math.random() * 16 | 0;
+            const v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+          });
+          const newUrl = new URL(window.location);
+          newUrl.searchParams.set('session_id', currentSessionId);
+          window.history.replaceState({}, '', newUrl);
         }
-        setIsInitialConnection(false);
+        
+        stateManager.setSessionId(currentSessionId);
+        console.log('Session ID:', currentSessionId);
+        
+        // Отправляем session_id серверу
+        ws.send(`session_id:${currentSessionId}`);
+        
+        // Проверяем статус генерации при подключении
+        checkGenerationStatus(currentSessionId);
         
         // Отправляем ping для проверки соединения
         ws.send('ping');
@@ -86,8 +101,7 @@ function App() {
 
       ws.onclose = () => {
         console.log('WebSocket disconnected');
-        setWsConnected(false);
-        showConnectionNotification('❌ Отключено от сервера', 'error');
+        stateManager.setWsConnected(false);
         
         // Очищаем ping интервал
         if (pingIntervalRef.current) {
@@ -96,19 +110,15 @@ function App() {
         }
         
         if (reconnectAttempts < maxReconnectAttempts) {
-          showConnectionNotification(`🔄 Переподключение... (${reconnectAttempts + 1}/${maxReconnectAttempts})`, 'loading');
           reconnectTimeoutRef.current = setTimeout(() => {
-            setReconnectAttempts(prev => prev + 1);
+            stateManager.setReconnectAttempts(reconnectAttempts + 1);
             connectWebSocket();
           }, reconnectDelay);
-        } else {
-          showConnectionNotification('❌ Не удалось подключиться к серверу', 'error');
         }
       };
 
       ws.onerror = (error) => {
         console.error('WebSocket error:', error);
-        showConnectionNotification('❌ Ошибка подключения к серверу', 'error');
       };
     } catch (error) {
       console.error('Error creating WebSocket:', error);
@@ -117,73 +127,45 @@ function App() {
 
   const handleWebSocketMessage = (data) => {
     switch (data.type) {
-      case 'start':
-        setStatus(data.message);
-        setStatusType('loading');
-        break;
-      case 'companies_start':
-        setStatus(data.message);
-        setProgress({ current: 0, total: 100, type: 'companies' });
-        break;
-      case 'companies_progress':
-        setProgress({ current: data.current, total: data.total, type: 'companies' });
-        setStatus(data.message);
-        break;
-      case 'company_created':
-        setStatus(`🏢 Создана компания ${data.company_id} (${data.progress})`);
-        break;
-      case 'companies_complete':
-        setStatus(data.message);
-        setProgress({ current: data.total || 100, total: data.total || 100, type: 'companies' });
-        break;
-      case 'companies_shuffled':
-        setStatus(data.message);
-        break;
-      case 'contacts_start':
-        setStatus(data.message);
-        break;
-      case 'company_processing':
-        setStatus(`📱 Обрабатываем компанию ${data.company_index}/${data.total_companies} (ID: ${data.company_id})`);
-        break;
-      case 'company_with_contact':
-        // Добавляем новую компанию с первым контактом
-        setCompanies(prev => [...prev, data.company_data]);
-        setStatus(`✅ Компания ${data.company_data.title} создана с контактом ${data.contact_data.name} ${data.contact_data.last_name}`);
-        break;
-      case 'contact_added':
-        // Добавляем контакт к существующей компании
-        setCompanies(prev => prev.map(company => {
-          if (company.id === data.company_id) {
-            return {
-              ...company,
-              contacts: [...company.contacts, data.contact_data]
-            };
-          }
-          return company;
-        }));
-        setStatus(`✅ Контакт ${data.contact_data.name} ${data.contact_data.last_name} добавлен к компании`);
-        break;
-      case 'contact_linked':
-        if (!data.success) {
-          setStatus(`❌ Ошибка привязки контакта ${data.contact_id} к компании ${data.company_id}`);
+      case 'complete':
+        stateManager.setStatus(data.message, 'success');
+        stateManager.setLoading(false);
+        
+        // Устанавливаем сгенерированные компании из WebSocket сообщения
+        if (data.companies) {
+          stateManager.setCompanies(data.companies);
         }
         break;
-      case 'complete':
-        setStatus(data.message);
-        setStatusType('success');
-        setLoading(false);
-        setProgress({ current: 0, total: 0, type: '' });
-        break;
       case 'error':
-        setStatus(data.message);
-        setStatusType('error');
-        setLoading(false);
-        setProgress({ current: 0, total: 0, type: '' });
+        stateManager.setStatus(data.message, 'error');
+        stateManager.setLoading(false);
         break;
       default:
         console.log('Unknown message type:', data.type);
     }
   };
+
+  // Подписка на изменения централизованного состояния
+  useEffect(() => {
+    const unsubscribeCompanies = stateManager.subscribe('companies', setCompanies);
+    const unsubscribeLoading = stateManager.subscribe('loading', setLoading);
+    const unsubscribeStatus = stateManager.subscribe('status', (data) => {
+      setStatus(data.status);
+      setStatusType(data.statusType);
+    });
+    const unsubscribeWsConnected = stateManager.subscribe('wsConnected', setWsConnected);
+    const unsubscribeReconnectAttempts = stateManager.subscribe('reconnectAttempts', setReconnectAttempts);
+    const unsubscribeSessionId = stateManager.subscribe('sessionId', setSessionId);
+
+    return () => {
+      unsubscribeCompanies();
+      unsubscribeLoading();
+      unsubscribeStatus();
+      unsubscribeWsConnected();
+      unsubscribeReconnectAttempts();
+      unsubscribeSessionId();
+    };
+  }, []);
 
   // Auto-connect WebSocket on component mount
   useEffect(() => {
@@ -203,51 +185,75 @@ function App() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const createTestData = async () => {
-    if (!wsConnected) {
-      setStatus('❌ Нет подключения к серверу. Попробуйте перезагрузить страницу.');
-      setStatusType('error');
+    if (!sessionId) {
+      stateManager.setStatus('❌ Ошибка: Нет активной сессии', 'error');
       return;
     }
 
-    setLoading(true);
-    setStatus('Создание тестовых данных...');
-    setStatusType('loading');
+    stateManager.setLoading(true);
+    stateManager.setStatus('Создание тестовых данных...', 'loading');
     
     // Очищаем список компаний перед началом создания
-    setCompanies([]);
+    stateManager.setCompanies([]);
 
     try {
-      const response = await fetch('/create-test-data', {
+      const response = await fetch(`${window.location.protocol}//${window.location.host}/create-test-data`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          session_id: sessionId
+        })
       });
 
       if (!response.ok) {
-        throw new Error('Ошибка создания данных');
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Ошибка создания данных');
+      }
+
+      const responseData = await response.json();
+      
+      // Если генерация уже запущена, показываем информационное сообщение
+      if (responseData.status === 'already_running') {
+        stateManager.setStatus('Генерация уже запущена в другой вкладке. Ожидайте результатов...', 'loading');
+        stateManager.setLoading(true);
+        return;
       }
 
       // WebSocket будет обрабатывать обновления в реальном времени
       // Не нужно здесь обрабатывать ответ, так как все обновления приходят через WebSocket
     } catch (error) {
-      setStatus(`❌ Ошибка: ${error.message}`);
-      setStatusType('error');
-      setLoading(false);
+      stateManager.setStatus(`❌ Ошибка: ${error.message}`, 'error');
+      stateManager.setLoading(false);
     }
   };
 
-  // Removed automatic data loading on startup
+  const checkGenerationStatus = async (currentSessionId) => {
+    if (!currentSessionId) return;
+    
+    try {
+      const response = await fetch(`${window.location.protocol}//${window.location.host}/generation-status/${currentSessionId}`);
+      if (response.ok) {
+        const status = await response.json();
+        
+        if (status.generation_active) {
+          if (status.generation_paused) {
+            stateManager.setStatus('Генерация приостановлена. Ожидание возобновления...', 'loading');
+            stateManager.setLoading(true);
+          } else {
+            stateManager.setStatus('Генерация данных в процессе...', 'loading');
+            stateManager.setLoading(true);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Ошибка проверки статуса генерации:', error);
+    }
+  };
 
   return (
     <div className="container">
-      {/* Уведомление о подключении */}
-      {connectionNotification && (
-        <div className={`connection-notification ${connectionNotification.type}`}>
-          {connectionNotification.message}
-        </div>
-      )}
-
       <div className="header">
         <h1>🏢 Bitrix24 Контакты</h1>
         <p>Управление компаниями и контактами</p>
@@ -267,19 +273,6 @@ function App() {
       {status && (
         <div className={`status ${statusType}`}>
           {status}
-          {progress.total > 0 && progress.type === 'companies' && (
-            <div className="progress-container">
-              <div className="progress-bar">
-                <div 
-                  className="progress-fill" 
-                  style={{ width: `${(progress.current / progress.total) * 100}%` }}
-                ></div>
-              </div>
-              <div className="progress-text">
-                {progress.current}/{progress.total} компаний
-              </div>
-            </div>
-          )}
         </div>
       )}
 
