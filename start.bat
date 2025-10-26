@@ -7,6 +7,10 @@ echo ============================================================
 echo                Bitrix24 Contacts - Project Launcher
 echo ============================================================
 echo.
+echo [INFO] 🚀 Серверное приложение Битрикс24
+echo [INFO] 📥 Скачать проект: https://github.com/your-repo/bitrix24-contacts
+echo [INFO] 🌐 Установка: https://amusingly-awaited-starling.cloudpub.ru/bitrix/oauth/install
+echo.
 
 REM Check if Python is installed
 python --version >nul 2>&1
@@ -85,6 +89,15 @@ REM Start unified server
 echo [INFO] Starting unified server on port 8000...
 echo [INFO] Frontend and backend will be served from the same port
 echo [INFO] Open your browser and go to: http://localhost:8000
+echo.
+echo ============================================================
+echo                    🎯 Готово к использованию!
+echo ============================================================
+echo [INFO] 📱 Локальное приложение: http://localhost:8000
+echo [INFO] 🌐 Серверное приложение: https://amusingly-awaited-starling.cloudpub.ru
+echo [INFO] 🔗 Установка в Битрикс24: https://amusingly-awaited-starling.cloudpub.ru/bitrix/oauth/install
+echo [INFO] 📥 Скачать проект: https://github.com/your-repo/bitrix24-contacts
+echo ============================================================
 echo.
 
 python backend\main.py

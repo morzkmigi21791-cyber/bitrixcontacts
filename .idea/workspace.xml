@@ -4,7 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="1fb4061f-318b-4d43-8720-2d02a0dbca85" name="Changes" comment="Прокачан UI, также улучшен бэкенд, теперь отправляет прогресс пользователю" />
+    <list default="true" id="1fb4061f-318b-4d43-8720-2d02a0dbca85" name="Changes" comment="Оптимизированны запросы через batchAPI, ентрализированны вкладки при помощи broadcastchannel, енерация отменяется при выходе пользователя с сервиса">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -83,12 +85,21 @@
       <option name="project" value="LOCAL" />
       <updated>1760012747233</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="Оптимизированны запросы через batchAPI, ентрализированны вкладки при помощи broadcastchannel, енерация отменяется при выходе пользователя с сервиса">
+      <option name="closed" value="true" />
+      <created>1760097278302</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1760097278302</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Проект перенесён на react + fastapi" />
     <MESSAGE value="Прокачан UI, также улучшен бэкенд, теперь отправляет прогресс пользователю" />
-    <option name="LAST_COMMIT_MESSAGE" value="Прокачан UI, также улучшен бэкенд, теперь отправляет прогресс пользователю" />
+    <MESSAGE value="Оптимизированны запросы через batchAPI, ентрализированны вкладки при помощи broadcastchannel, енерация отменяется при выходе пользователя с сервиса" />
+    <option name="LAST_COMMIT_MESSAGE" value="Оптимизированны запросы через batchAPI, ентрализированны вкладки при помощи broadcastchannel, енерация отменяется при выходе пользователя с сервиса" />
   </component>
 </project>

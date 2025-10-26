@@ -16,6 +16,8 @@ from models import Company, CreateTestDataRequest
 from websocket_manager import ConnectionManager
 from data_generator import create_companies_batch_import, create_contacts_batch_import, update_contacts_company_batch, create_one_to_one_links
 from bitrix_api import bx_call
+from oauth_handler import create_oauth_routes
+from bitrix_app_handler import create_app_routes
 
 app = FastAPI(title="Bitrix24 Contacts API")
 
@@ -29,6 +31,10 @@ app.add_middleware(
 )
 
 manager = ConnectionManager()
+
+# Добавляем маршруты для OAuth и интеграции с Битрикс24
+create_oauth_routes(app)
+create_app_routes(app)
 
 def get_generated_data_batch(company_ids, contact_ids):
     """Получает сгенерированные компании и контакты через batch API батчами по 20"""
